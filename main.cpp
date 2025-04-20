@@ -1,4 +1,4 @@
-#include <ncurses.h>
+#include <ncurses.h> //abyan
 #include <dirent.h>
 #include <vector>
 #include <string>
@@ -12,6 +12,7 @@ const int SIDEBAR_WIDTH = 25;
 
 stack<vector<string>> undoStack;
 stack<vector<string>> redoStack;
+
 // BALQIS//
 string bold(const string& text) {
     return "**" + text + "**";
@@ -86,7 +87,7 @@ void draw_editor(const vector<string>& lines) {
     }
 }
 
-void save_undo_state(const vector<string>& lines) {
+void save_undo_state(const vector<string>& lines) { //abyan
     undoStack.push(lines);
     while (!redoStack.empty()) redoStack.pop();
 }
@@ -120,7 +121,7 @@ int main() {
 
         if (ch == 24) { // Ctrl+X
             running = false;
-        } else if (ch == 26) { // Ctrl+Z (Undo)
+        } else if (ch == 26) { // Ctrl+Z (Undo) //abyan
             if (!undoStack.empty()) {
                 redoStack.push(lines);
                 lines = undoStack.top();
@@ -132,7 +133,7 @@ int main() {
                 undoStack.push(lines);
                 lines = redoStack.top();
                 redoStack.pop();
-                cx = cy = 0;
+                cx = cy = 0; //sampe sini
             }
         } else if (ch == 10) { // Enter
             save_undo_state(lines);
