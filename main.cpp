@@ -5,22 +5,26 @@
 #include <stack>
 #include <filesystem>
 
+using namespace std;
 namespace fs = std::filesystem;
 
-// Ukuran sidebar
 const int SIDEBAR_WIDTH = 25;
 
-// Stack untuk undo-redo
-std::stack<std::vector<std::string>> undoStack;
-std::stack<std::vector<std::string>> redoStack;
+struct FormattedChar {
+    char ch;
+    bool bold;
+    bool italic;
+    bool underline;
+};
 
-void list_directory_tree(const fs::path& path, std::vector<std::string>& files, int depth = 0) {
+stack<vector<vector<FormattedChar>>> undoStack;
+stack<vector<vector<FormattedChar>>> redoStack;
+
+void list_directory_tree(const fs::path& path, vector<string>& files, int depth = 0) {
     if (!fs::exists(path) || !fs::is_directory(path)) return;
-
     for (const auto& entry : fs::directory_iterator(path)) {
-        std::string indent(depth * 2, ' ');
-        std::string name = entry.path().filename().string();
-
+        string indent(depth * 2, ' ');
+        string name = entry.path().filename().string();
         if (entry.is_directory()) {
             files.push_back(indent + "(D) " + name);
             list_directory_tree(entry.path(), files, depth + 1);
@@ -43,29 +47,44 @@ void draw_header() {
     attroff(A_REVERSE);
 }
 
-void draw_footer() {
+void draw_footer(bool isBold, bool isItalic, bool isUnderline) {
     int y = LINES - 1;
     attron(A_REVERSE);
     mvhline(y, 0, ' ', COLS + 3);
-    mvprintw(y, 1, " CTRL+X: Exit  CTRL+Z: Undo  CTRL+Y: Redo ");
+    mvprintw(y, 1, " CTRL+X: Exit  CTRL+Z: Undo  CTRL+Y: Redo  CTRL+B/I/U: Toggle Formatting ");
+    int x = COLS - 30;
+    mvprintw(y, x, "B:%s I:%s U:%s",
+        isBold ? "ON" : "OFF",
+        isItalic ? "ON" : "OFF",
+        isUnderline ? "ON" : "OFF");
     attroff(A_REVERSE);
 }
 
-void draw_sidebar(const std::vector<std::string>& files) {
+void draw_sidebar(const vector<string>& files) {
     for (int i = 0; i < files.size() && i < LINES - 2; ++i) {
         mvprintw(i + 2, 1, "%-*s", SIDEBAR_WIDTH - 1, files[i].c_str());
     }
 }
 
-void draw_editor(const std::vector<std::string>& lines) {
+void draw_editor(const vector<vector<FormattedChar>>& lines) {
     for (int i = 0; i < lines.size() && i < LINES - 2; ++i) {
-        mvprintw(i + 2, SIDEBAR_WIDTH, "%s", lines[i].c_str());
+        move(i + 2, SIDEBAR_WIDTH);
+        for (const auto& fc : lines[i]) {
+            attr_t attr = A_NORMAL;
+            if (fc.bold) attr |= A_BOLD;
+            if (fc.underline) attr |= A_UNDERLINE;
+            if (fc.italic) attr |= A_DIM; // Simulasi italic
+
+            attron(attr);
+            addch(fc.ch);
+            attroff(attr);
+        }
     }
 }
 
-void save_undo_state(const std::vector<std::string>& lines) {
+void save_undo_state(const vector<vector<FormattedChar>>& lines) {
     undoStack.push(lines);
-    while (!redoStack.empty()) redoStack.pop(); // Reset redo saat state baru disimpan
+    while (!redoStack.empty()) redoStack.pop();
 }
 
 int main() {
@@ -75,10 +94,13 @@ int main() {
     noecho();
     curs_set(1);
 
-    std::vector<std::string> lines(1, "");
-    std::vector<std::string> files;
+    vector<vector<FormattedChar>> lines(1, vector<FormattedChar>());
+    vector<string> files;
     int cx = 0, cy = 0;
     bool running = true;
+
+    // Format mode
+    bool isBold = false, isItalic = false, isUnderline = false;
 
     while (running) {
         clear();
@@ -88,7 +110,8 @@ int main() {
         draw_sidebar(files);
         draw_separator();
         draw_editor(lines);
-        draw_footer();
+        draw_footer(isBold, isItalic, isUnderline);
+
         move(cy + 2, cx + SIDEBAR_WIDTH);
         refresh();
 
@@ -96,14 +119,14 @@ int main() {
 
         if (ch == 24) { // Ctrl+X
             running = false;
-        } else if (ch == 26) { // Ctrl+Z (Undo)
+        } else if (ch == 26) { // Ctrl+Z
             if (!undoStack.empty()) {
                 redoStack.push(lines);
                 lines = undoStack.top();
                 undoStack.pop();
                 cx = cy = 0;
             }
-        } else if (ch == 25) { // Ctrl+Y (Redo)
+        } else if (ch == 25) { // Ctrl+Y
             if (!redoStack.empty()) {
                 undoStack.push(lines);
                 lines = redoStack.top();
@@ -112,18 +135,27 @@ int main() {
             }
         } else if (ch == 10) { // Enter
             save_undo_state(lines);
-            lines.insert(lines.begin() + cy + 1, "");
+            vector<FormattedChar> newLine(
+                lines[cy].begin() + cx,
+                lines[cy].end()
+            );
+            lines[cy].erase(lines[cy].begin() + cx, lines[cy].end());
+            lines.insert(lines.begin() + cy + 1, newLine);
             cy++;
             cx = 0;
         } else if (ch == KEY_BACKSPACE || ch == 127) {
             if (cx > 0) {
                 save_undo_state(lines);
-                lines[cy].erase(cx - 1, 1);
+                lines[cy].erase(lines[cy].begin() + cx - 1);
                 cx--;
             } else if (cy > 0) {
                 save_undo_state(lines);
                 cx = lines[cy - 1].size();
-                lines[cy - 1] += lines[cy];
+                lines[cy - 1].insert(
+                    lines[cy - 1].end(),
+                    lines[cy].begin(),
+                    lines[cy].end()
+                );
                 lines.erase(lines.begin() + cy);
                 cy--;
             }
@@ -137,9 +169,16 @@ int main() {
         } else if (ch == KEY_DOWN && cy + 1 < lines.size()) {
             cy++;
             if (cx > lines[cy].size()) cx = lines[cy].size();
+        } else if (ch == 2) { // Ctrl+B
+            isBold = !isBold;
+        } else if (ch == 9) { // Tab as Ctrl+I (italic)
+            isItalic = !isItalic;
+        } else if (ch == 21) { // Ctrl+U
+            isUnderline = !isUnderline;
         } else if (isprint(ch)) {
             save_undo_state(lines);
-            lines[cy].insert(cx, 1, (char)ch);
+            FormattedChar fc = { (char)ch, isBold, isItalic, isUnderline };
+            lines[cy].insert(lines[cy].begin() + cx, fc);
             cx++;
         }
     }
