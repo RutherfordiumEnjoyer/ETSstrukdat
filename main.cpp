@@ -10,21 +10,40 @@ namespace fs = std::filesystem;
 
 const int SIDEBAR_WIDTH = 25;
 
-struct FormattedChar {
-    char ch;
-    bool bold;
-    bool italic;
-    bool underline;
-};
+stack<vector<string>> undoStack;
+stack<vector<string>> redoStack;
+// BALQIS//
+string bold(const string& text) {
+    return "**" + text + "**";
+}
 
-stack<vector<vector<FormattedChar>>> undoStack;
-stack<vector<vector<FormattedChar>>> redoStack;
+string italic(const string& text) {
+    return "*" + text + "*";
+}
+
+string underline(const string& text) {
+    return "_" + text + "_";
+}
+
+string formatText(const string& text, const string& formatType) {
+    if (formatType == "bold") {
+        return bold(text);
+    } else if (formatType == "italic") {
+        return italic(text);
+    } else if (formatType == "underline") {
+        return underline(text);
+    } else {
+        return text;
+    }
+}
 
 void list_directory_tree(const fs::path& path, vector<string>& files, int depth = 0) {
     if (!fs::exists(path) || !fs::is_directory(path)) return;
+
     for (const auto& entry : fs::directory_iterator(path)) {
         string indent(depth * 2, ' ');
         string name = entry.path().filename().string();
+
         if (entry.is_directory()) {
             files.push_back(indent + "(D) " + name);
             list_directory_tree(entry.path(), files, depth + 1);
@@ -47,16 +66,11 @@ void draw_header() {
     attroff(A_REVERSE);
 }
 
-void draw_footer(bool isBold, bool isItalic, bool isUnderline) {
+void draw_footer() {
     int y = LINES - 1;
     attron(A_REVERSE);
     mvhline(y, 0, ' ', COLS + 3);
-    mvprintw(y, 1, " CTRL+X: Exit  CTRL+Z: Undo  CTRL+Y: Redo  CTRL+B/I/U: Toggle Formatting ");
-    int x = COLS - 30;
-    mvprintw(y, x, "B:%s I:%s U:%s",
-        isBold ? "ON" : "OFF",
-        isItalic ? "ON" : "OFF",
-        isUnderline ? "ON" : "OFF");
+    mvprintw(y, 1, " CTRL+X: Exit  CTRL+Z: Undo  CTRL+Y: Redo  CTRL+B: Bold  CTRL+I: Italic  CTRL+U: Underline ");
     attroff(A_REVERSE);
 }
 
@@ -66,23 +80,13 @@ void draw_sidebar(const vector<string>& files) {
     }
 }
 
-void draw_editor(const vector<vector<FormattedChar>>& lines) {
+void draw_editor(const vector<string>& lines) {
     for (int i = 0; i < lines.size() && i < LINES - 2; ++i) {
-        move(i + 2, SIDEBAR_WIDTH);
-        for (const auto& fc : lines[i]) {
-            attr_t attr = A_NORMAL;
-            if (fc.bold) attr |= A_BOLD;
-            if (fc.underline) attr |= A_UNDERLINE;
-            if (fc.italic) attr |= A_DIM; // Simulasi italic
-
-            attron(attr);
-            addch(fc.ch);
-            attroff(attr);
-        }
+        mvprintw(i + 2, SIDEBAR_WIDTH, "%s", lines[i].c_str());
     }
 }
 
-void save_undo_state(const vector<vector<FormattedChar>>& lines) {
+void save_undo_state(const vector<string>& lines) {
     undoStack.push(lines);
     while (!redoStack.empty()) redoStack.pop();
 }
@@ -94,13 +98,11 @@ int main() {
     noecho();
     curs_set(1);
 
-    vector<vector<FormattedChar>> lines(1, vector<FormattedChar>());
+    vector<string> lines(1, "");
     vector<string> files;
     int cx = 0, cy = 0;
     bool running = true;
-
-    // Format mode
-    bool isBold = false, isItalic = false, isUnderline = false;
+    string formatMode = "";
 
     while (running) {
         clear();
@@ -110,8 +112,7 @@ int main() {
         draw_sidebar(files);
         draw_separator();
         draw_editor(lines);
-        draw_footer(isBold, isItalic, isUnderline);
-
+        draw_footer();
         move(cy + 2, cx + SIDEBAR_WIDTH);
         refresh();
 
@@ -119,14 +120,14 @@ int main() {
 
         if (ch == 24) { // Ctrl+X
             running = false;
-        } else if (ch == 26) { // Ctrl+Z
+        } else if (ch == 26) { // Ctrl+Z (Undo)
             if (!undoStack.empty()) {
                 redoStack.push(lines);
                 lines = undoStack.top();
                 undoStack.pop();
                 cx = cy = 0;
             }
-        } else if (ch == 25) { // Ctrl+Y
+        } else if (ch == 25) { // Ctrl+Y (Redo)
             if (!redoStack.empty()) {
                 undoStack.push(lines);
                 lines = redoStack.top();
@@ -135,27 +136,18 @@ int main() {
             }
         } else if (ch == 10) { // Enter
             save_undo_state(lines);
-            vector<FormattedChar> newLine(
-                lines[cy].begin() + cx,
-                lines[cy].end()
-            );
-            lines[cy].erase(lines[cy].begin() + cx, lines[cy].end());
-            lines.insert(lines.begin() + cy + 1, newLine);
+            lines.insert(lines.begin() + cy + 1, "");
             cy++;
             cx = 0;
         } else if (ch == KEY_BACKSPACE || ch == 127) {
             if (cx > 0) {
                 save_undo_state(lines);
-                lines[cy].erase(lines[cy].begin() + cx - 1);
+                lines[cy].erase(cx - 1, 1);
                 cx--;
             } else if (cy > 0) {
                 save_undo_state(lines);
                 cx = lines[cy - 1].size();
-                lines[cy - 1].insert(
-                    lines[cy - 1].end(),
-                    lines[cy].begin(),
-                    lines[cy].end()
-                );
+                lines[cy - 1] += lines[cy];
                 lines.erase(lines.begin() + cy);
                 cy--;
             }
@@ -169,20 +161,24 @@ int main() {
         } else if (ch == KEY_DOWN && cy + 1 < lines.size()) {
             cy++;
             if (cx > lines[cy].size()) cx = lines[cy].size();
-        } else if (ch == 2) { // Ctrl+B
-            isBold = !isBold;
-        } else if (ch == 9) { // Tab as Ctrl+I (italic)
-            isItalic = !isItalic;
-        } else if (ch == 21) { // Ctrl+U
-            isUnderline = !isUnderline;
+        } else if (ch == 2) { // Ctrl+B (Bold)
+            formatMode = "bold";
+        } else if (ch == 9) { // Ctrl+I (Italic)
+            formatMode = "italic";
+        } else if (ch == 21) { // Ctrl+U (Underline)
+            formatMode = "underline";
         } else if (isprint(ch)) {
             save_undo_state(lines);
-            FormattedChar fc = { (char)ch, isBold, isItalic, isUnderline };
-            lines[cy].insert(lines[cy].begin() + cx, fc);
-            cx++;
+            string charStr(1, (char)ch);
+            if (!formatMode.empty()) {
+                charStr = formatText(charStr, formatMode);
+                formatMode = "";
+            }
+            lines[cy].insert(cx, charStr);
+            cx += charStr.size();
         }
     }
 
     endwin();
-    return 0;
+    return 0;
 }
