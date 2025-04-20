@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 const int SIDEBAR_WIDTH = 25;
 
 stack<vector<string>> undoStack;
-stack<vector<string>> redoStack;
+stack<vector<string>> redoStack; //abyan
 
 // BALQIS//
 
@@ -123,9 +123,9 @@ int main() {
 
         int ch = getch();
 
-        if (ch == 24) { // Ctrl+X
+        if (ch == 24) { // Ctrl+X //abyan
             running = false;
-        } else if (ch == 26) { // Ctrl+Z (Undo) //abyan
+        } else if (ch == 26) { // Ctrl+Z (Undo)
             if (!undoStack.empty()) {
                 redoStack.push(lines);
                 lines = undoStack.top();
@@ -137,7 +137,7 @@ int main() {
                 undoStack.push(lines);
                 lines = redoStack.top();
                 redoStack.pop();
-                cx = cy = 0; //sampe sini
+                cx = cy = 0;
             }
         } else if (ch == 10) { // Enter
             save_undo_state(lines);
@@ -154,7 +154,7 @@ int main() {
                 cx = lines[cy - 1].size();
                 lines[cy - 1] += lines[cy];
                 lines.erase(lines.begin() + cy);
-                cy--;
+                cy--; //abyan
             }
         } else if (ch == KEY_LEFT && cx > 0) {
             cx--;
