@@ -14,18 +14,20 @@ stack<vector<string>> undoStack;
 stack<vector<string>> redoStack;
 
 // BALQIS//
+
+//Funtion Bold//
 string bold(const string& text) {
     return "**" + text + "**";
 }
-
+//Function italic//
 string italic(const string& text) {
     return "*" + text + "*";
 }
-
+//function underline//
 string underline(const string& text) {
     return "_" + text + "_";
 }
-
+// function formatText//
 string formatText(const string& text, const string& formatType) {
     if (formatType == "bold") {
         return bold(text);
