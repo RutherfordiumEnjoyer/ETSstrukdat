@@ -144,7 +144,7 @@ int main() {
             lines.insert(lines.begin() + cy + 1, ""); //baris kosong
             cy++;
             cx = 0;
-        } else if (ch == KEY_BACKSPACE || ch == 127) {
+        } else if (ch == KEY_BACKSPACE || ch == 127) { // delete //
             if (cx > 0) {
                 save_undo_state(lines); //nyimpen state sebelum diubah
                 lines[cy].erase(cx - 1, 1); //hapus karakter sebelum cursor
