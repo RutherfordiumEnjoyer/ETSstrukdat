@@ -148,13 +148,13 @@ int main() {
             if (cx > 0) {
                 save_undo_state(lines); //nyimpen state sebelum diubah
                 lines[cy].erase(cx - 1, 1); //hapus karakter sebelum cursor
-                cx--;
+                cx--; //geser kekiri
             } else if (cy > 0) {
                 save_undo_state(lines);
                 cx = lines[cy - 1].size();
                 lines[cy - 1] += lines[cy]; //gabungin baris saat ini dengan sebelumnya
                 lines.erase(lines.begin() + cy);
-                cy--; //abyan
+                cy--; //pindah kebaris sebelum
             }
         } else if (ch == KEY_LEFT && cx > 0) {
             cx--; //  Jika tombol panah kiri ditekan dan cx //
