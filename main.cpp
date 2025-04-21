@@ -172,7 +172,7 @@ int main() {
             formatMode = "italic";
         } else if (ch == 21) { // Ctrl+U (Underline)
             formatMode = "underline";
-        } else if (isprint(ch)) {
+        } else if (isprint(ch)) { // insert // 
             save_undo_state(lines);
             string charStr(1, (char)ch);
             if (!formatMode.empty()) {
