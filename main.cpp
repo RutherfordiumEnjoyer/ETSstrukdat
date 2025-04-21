@@ -157,7 +157,7 @@ int main() {
                 cy--; //abyan
             }
         } else if (ch == KEY_LEFT && cx > 0) {
-            cx--;
+            cx--; //  Jika tombol panah kiri ditekan dan cx //
         } else if (ch == KEY_RIGHT && cx < lines[cy].size()) {
             cx++;
         } else if (ch == KEY_UP && cy > 0) {
@@ -184,6 +184,6 @@ int main() {
         }
     }
 
-    endwin();
+    endwin(); // Mengembalikan terminal ke mode normal. //
     return 0;
 }
