@@ -127,9 +127,9 @@ int main() {
             running = false; //ngakhirin loop utama dan keluar dari terminal
         } else if (ch == 26) { // Ctrl+Z (Undo)
             if (!undoStack.empty()) {
-                redoStack.push(lines);
-                lines = undoStack.top();
-                undoStack.pop();
+                redoStack.push(lines); // simpan state terkini ke redoStack
+                lines = undoStack.top(); // ambil state terakhir dari redostack
+                undoStack.pop(); // hapus state tsb dari redostack
                 cx = cy = 0;
             }
         } else if (ch == 25) { // Ctrl+Y (Redo)
@@ -140,19 +140,19 @@ int main() {
                 cx = cy = 0;
             }
         } else if (ch == 10) { // Enter
-            save_undo_state(lines);
-            lines.insert(lines.begin() + cy + 1, "");
+            save_undo_state(lines); //menyimpan state sebelum diubah
+            lines.insert(lines.begin() + cy + 1, ""); //baris kosong
             cy++;
             cx = 0;
         } else if (ch == KEY_BACKSPACE || ch == 127) {
             if (cx > 0) {
-                save_undo_state(lines);
-                lines[cy].erase(cx - 1, 1);
+                save_undo_state(lines); //nyimpen state sebelum diubah
+                lines[cy].erase(cx - 1, 1); //hapus karakter sebelum cursor
                 cx--;
             } else if (cy > 0) {
                 save_undo_state(lines);
                 cx = lines[cy - 1].size();
-                lines[cy - 1] += lines[cy];
+                lines[cy - 1] += lines[cy]; //gabungin baris saat ini dengan sebelumnya
                 lines.erase(lines.begin() + cy);
                 cy--; //abyan
             }
