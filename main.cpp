@@ -152,8 +152,8 @@ int main() {
             } else if (cy > 0) {
                 save_undo_state(lines);
                 cx = lines[cy - 1].size();
-                lines[cy - 1] += lines[cy]; //gabungin baris saat ini dengan sebelumnya
-                lines.erase(lines.begin() + cy);
+                lines[cy - 1] += lines[cy]; //gabungin baris saat ini dengan sebelumnya // 
+                lines.erase(lines.begin() + cy);  // Hapus baris sekarang //
                 cy--; //pindah kebaris sebelum
             }
         } else if (ch == KEY_LEFT && cx > 0) {
