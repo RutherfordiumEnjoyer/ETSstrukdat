@@ -141,7 +141,7 @@ int main() {
             }
         } else if (ch == 10) { // Enter
             save_undo_state(lines); //menyimpan state sebelum diubah
-            lines.insert(lines.begin() + cy + 1, ""); //baris kosong
+            lines.insert(lines.begin() + cy + 1, ""); //// Sisipkan baris kosong setelah baris aktif//
             cy++;
             cx = 0;
         } else if (ch == KEY_BACKSPACE || ch == 127) { // delete //
