@@ -10,8 +10,8 @@ namespace fs = std::filesystem;
 
 const int SIDEBAR_WIDTH = 25;
 
-stack<vector<string>> undoStack;
-stack<vector<string>> redoStack; //abyan
+stack<vector<string>> undoStack; // Menyimpan keadaan editor sebelum terjadi perubahan untuk digunakan dalam fitur undo
+stack<vector<string>> redoStack; // Menyimpan keadaan yang di-undo biar bisa diakses lagi untuk fitur redo, abyan
 
 // BALQIS//
 
@@ -91,9 +91,9 @@ void draw_editor(const vector<string>& lines) {
     }
 }
 
-void save_undo_state(const vector<string>& lines) { //abyan
-    undoStack.push(lines);
-    while (!redoStack.empty()) redoStack.pop();
+void save_undo_state(const vector<string>& lines) { //lines: Sebuah vector<string> merepresentasikan semua baris di terminal
+    undoStack.push(lines); //Menyimpan salinan lines ke dalam stack undostack
+    while (!redoStack.empty()) redoStack.pop(); //kalau ada perubahan, state di redostack dihapus
 }
 
 int main() {
@@ -124,7 +124,7 @@ int main() {
         int ch = getch();
 
         if (ch == 24) { // Ctrl+X //abyan
-            running = false;
+            running = false; //ngakhirin loop utama dan keluar dari terminal
         } else if (ch == 26) { // Ctrl+Z (Undo)
             if (!undoStack.empty()) {
                 redoStack.push(lines);
